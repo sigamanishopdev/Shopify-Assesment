@@ -348,6 +348,8 @@
     "menu": "Menu",
     "multicolumn": "Multicolumn",
     "rich_text_section": "Rich text",
+    "related_products": "Related products",
+
     "page": "Page",
     // Theme block name for main page body content
     "page_content": "Content",
