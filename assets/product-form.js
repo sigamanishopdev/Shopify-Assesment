@@ -1120,3 +1120,198 @@ class ProductFormComponent extends Component {
 if (!customElements.get('product-form-component')) {
   customElements.define('product-form-component', ProductFormComponent);
 }
+
+/** @param {number} cents */
+const money = (cents) => '$' + (cents / 100).toFixed(2);
+
+/**
+ * @typedef {{ id: number, options: string[], option1: string, price: number, compare_at_price: number | null, featured_image: { src: string } | null, sku: string | null, available: boolean }} AssessmentVariant
+ */
+
+class VariantSelects extends HTMLElement {
+  /** @type {{ id: number, title: string, variants: AssessmentVariant[] }} */
+  product = { id: 0, title: '', variants: [] };
+
+  connectedCallback() {
+    this.product = JSON.parse(
+      /** @type {HTMLScriptElement} */ (document.getElementById('ProductJSON')).textContent || '{}'
+    );
+
+    this.addEventListener('change', this.onVariantChange.bind(this));
+
+    this.setCurrentVariant(
+      this.product.variants.find(
+        (variant) =>
+          variant.id === Number(this.dataset.initialVariantId)
+      )
+    );
+  }
+
+  getSelectedOptions() {
+    return Array.from(
+      /** @type {NodeListOf<HTMLInputElement>} */ (this.querySelectorAll('input[type="radio"]:checked'))
+    ).map((input) => input.value);
+  }
+
+  /** @param {string[]} options */
+  findVariant(options) {
+    return this.product.variants.find((variant) =>
+      variant.options.every(
+        (value, index) => value === options[index]
+      )
+    );
+  }
+
+  onVariantChange() {
+    this.setCurrentVariant(
+      this.findVariant(this.getSelectedOptions())
+    );
+  }
+
+  /** @param {AssessmentVariant | undefined} variant */
+  setCurrentVariant(variant) {
+    this.currentVariant = variant || null;
+    this.render();
+  }
+
+  render() {
+    const variant = this.currentVariant;
+
+    this.renderOptionLabels();
+
+    if (!variant) {
+      this.renderUnavailable();
+      return;
+    }
+
+    this.renderPrice(variant);
+    this.renderComparePrice(variant);
+    this.renderMedia(variant);
+    this.renderSku(variant);
+    this.renderAvailability(variant);
+    this.syncVariantInputs(variant);
+    this.updateUrl(variant);
+  }
+
+  /** @param {AssessmentVariant} variant */
+  syncVariantInputs(variant) {
+    document
+      .querySelectorAll(
+        'input[name="id"][data-product-id="' +
+          this.product.id +
+          '"]'
+      )
+      .forEach((input) => {
+        /** @type {HTMLInputElement} */ (input).value = String(variant.id);
+      });
+  }
+
+  /** @param {AssessmentVariant} variant */
+  updateUrl(variant) {
+    const url = new URL(window.location.href);
+
+    url.searchParams.set('variant', String(variant.id));
+
+    window.history.replaceState({}, '', url);
+  }
+
+  renderUnavailable() {
+    /** @type {HTMLElement} */ (document.getElementById('Price')).textContent = '—';
+
+    /** @type {HTMLElement} */ (document.getElementById('ComparePrice')).hidden = true;
+    /** @type {HTMLElement} */ (document.getElementById('SaleBadge')).hidden = true;
+
+    /** @type {HTMLElement} */ (document.getElementById('Sku')).textContent = '—';
+
+    const availability =
+      /** @type {HTMLElement} */ (document.getElementById('Availability'));
+
+    availability.textContent = 'Unavailable';
+    availability.dataset.state = 'out';
+
+    document.querySelectorAll('[data-atc]').forEach((button) => {
+      /** @type {HTMLButtonElement} */ (button).disabled = true;
+      button.textContent = 'Unavailable';
+    });
+  }
+
+  renderOptionLabels() {
+    this.querySelectorAll('fieldset').forEach((fieldset) => {
+      const checked = /** @type {HTMLInputElement | null} */ (fieldset.querySelector('input:checked'));
+
+      /** @type {HTMLElement} */ (fieldset.querySelector('[data-selected-value]')).textContent = checked ? checked.value : '';
+    });
+  }
+
+  /** @param {AssessmentVariant} variant */
+  renderPrice(variant) {
+    /** @type {HTMLElement} */ (document.getElementById('Price')).textContent =
+      money(variant.price);
+  }
+
+  /** @param {AssessmentVariant} variant */
+  renderComparePrice(variant) {
+    const compare =
+      /** @type {HTMLElement} */ (document.getElementById('ComparePrice'));
+
+    const badge =
+      /** @type {HTMLElement} */ (document.getElementById('SaleBadge'));
+
+    const onSale =
+      variant.compare_at_price != null && variant.compare_at_price > variant.price;
+
+    compare.hidden = !onSale;
+    badge.hidden = !onSale;
+
+    if (onSale) {
+      compare.textContent =
+        money(/** @type {number} */ (variant.compare_at_price));
+    }
+  }
+
+  /** @param {AssessmentVariant} variant */
+  renderMedia(variant) {
+    const media =
+      /** @type {HTMLImageElement | null} */ (document.getElementById('ProductMedia'));
+
+    if (variant.featured_image && media) {
+      media.src = variant.featured_image.src;
+    }
+
+    /** @type {HTMLElement} */ (document.getElementById('MediaCaption')).textContent =
+      this.product.title +
+      ' — ' +
+      variant.option1;
+  }
+
+  /** @param {AssessmentVariant} variant */
+  renderSku(variant) {
+    /** @type {HTMLElement} */ (document.getElementById('Sku')).textContent =
+      variant.sku || '—';
+  }
+
+  /** @param {AssessmentVariant} variant */
+  renderAvailability(variant) {
+    const availability =
+      /** @type {HTMLElement} */ (document.getElementById('Availability'));
+
+    availability.textContent = variant.available
+      ? 'In stock'
+      : 'Sold out';
+
+    availability.dataset.state =
+      variant.available ? 'in' : 'out';
+
+    document.querySelectorAll('[data-atc]').forEach((button) => {
+      /** @type {HTMLButtonElement} */ (button).disabled = !variant.available;
+
+      button.textContent = variant.available
+        ? 'Add to cart'
+        : 'Sold out';
+    });
+  }
+}
+
+if (!customElements.get('variant-selects')) {
+  customElements.define('variant-selects', VariantSelects);
+}

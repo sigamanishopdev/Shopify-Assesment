@@ -1,0 +1,188 @@
+<section class="pdp-variant-assessment">
+  <variant-selects
+    data-initial-variant-id="{{ product.selected_or_first_available_variant.id }}"
+  >
+    {% for option in product.options_with_values %}
+      <fieldset>
+        <legend>
+          {{ option.name }}:
+          <b data-selected-value>
+            {{ option.selected_value }}
+          </b>
+        </legend>
+
+        {% for value in option.values %}
+          {% assign option_index = forloop.parentloop.index %}
+          {% assign input_id = 'Option-' | append: section.id | append: '-' | append: option_index | append: '-' | append: forloop.index %}
+
+          <input
+            type="radio"
+            id="{{ input_id }}"
+            name="{{ option.name | escape }}"
+            value="{{ value | escape }}"
+            {% if option.selected_value == value %}
+              checked
+            {% endif %}
+          >
+
+          <label for="{{ input_id }}">
+            {{ value }}
+          </label>
+        {% endfor %}
+      </fieldset>
+    {% endfor %}
+  </variant-selects>
+
+  <div class="product-info">
+    <div id="Price">
+      {{ product.selected_or_first_available_variant.price | money }}
+    </div>
+
+    <div
+      id="ComparePrice"
+      {% unless product.selected_or_first_available_variant.compare_at_price > product.selected_or_first_available_variant.price %}hidden{% endunless %}
+    >
+      {% if product.selected_or_first_available_variant.compare_at_price
+        > product.selected_or_first_available_variant.price
+      %}
+        {{ product.selected_or_first_available_variant.compare_at_price | money }}
+      {% endif %}
+    </div>
+
+    <div
+      id="SaleBadge"
+      {% unless product.selected_or_first_available_variant.compare_at_price
+        > product.selected_or_first_available_variant.price
+      %}
+        hidden
+      {% endunless %}
+    >
+      Sale
+    </div>
+
+    <div id="Sku">
+      {{ product.selected_or_first_available_variant.sku }}
+    </div>
+
+    <div
+      id="Availability"
+      data-state="{% if product.selected_or_first_available_variant.available %}in{% else %}out{% endif %}"
+    >
+      {% if product.selected_or_first_available_variant.available %}
+        In stock
+      {% else %}
+        Sold out
+      {% endif %}
+    </div>
+
+    {% assign initial_variant = product.selected_or_first_available_variant %}
+
+    <figure>
+      {% if initial_variant.featured_image %}
+        <img
+          id="ProductMedia"
+          src="{{ initial_variant.featured_image | image_url: width: 1200 }}"
+          alt="{{ product.title | escape }}"
+          width="{{ initial_variant.featured_image.width }}"
+          height="{{ initial_variant.featured_image.height }}"
+        >
+      {% elsif product.featured_image %}
+        <img
+          id="ProductMedia"
+          src="{{ product.featured_image | image_url: width: 1200 }}"
+          alt="{{ product.title | escape }}"
+          width="{{ product.featured_image.width }}"
+          height="{{ product.featured_image.height }}"
+        >
+      {% endif %}
+
+      <figcaption id="MediaCaption">
+        {{ product.title }} — {{ initial_variant.option1 }}
+      </figcaption>
+    </figure>
+  </div>
+
+  <form
+    id="product-form"
+    method="post"
+    action="{{ routes.cart_add_url }}"
+    data-atc-form="main form"
+  >
+    <input
+      type="hidden"
+      name="id"
+      data-product-id="{{ product.id }}"
+      value="{{ initial_variant.id }}"
+    >
+
+    <input
+      type="hidden"
+      name="quantity"
+      value="1"
+    >
+
+    <button
+      id="AddToCart"
+      type="submit"
+      data-atc
+      {% unless initial_variant.available %}
+        disabled
+      {% endunless %}
+    >
+      {% if initial_variant.available %}
+        Add to cart
+      {% else %}
+        Sold out
+      {% endif %}
+    </button>
+  </form>
+
+  <form
+    id="sticky-form"
+    method="post"
+    action="{{ routes.cart_add_url }}"
+    data-atc-form="sticky bar"
+  >
+    <input
+      type="hidden"
+      name="id"
+      data-product-id="{{ product.id }}"
+      value="{{ initial_variant.id }}"
+    >
+
+    <input
+      type="hidden"
+      name="quantity"
+      value="1"
+    >
+
+    <button
+      id="StickyAddToCart"
+      type="submit"
+      data-atc
+      {% unless initial_variant.available %}
+        disabled
+      {% endunless %}
+    >
+      {% if initial_variant.available %}
+        Add to cart
+      {% else %}
+        Sold out
+      {% endif %}
+    </button>
+  </form>
+
+  <script
+    type="application/json"
+    id="ProductJSON"
+  >
+    {{ product | json }}
+  </script>
+</section>
+
+{% schema %}
+{
+  "name": "PDP variant assessment",
+  "settings": []
+}
+{% endschema %}
